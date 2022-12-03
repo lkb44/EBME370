@@ -35,7 +35,7 @@ unsigned long microSeconds;
  
 double vReal[SAMPLES]; //create vector of size SAMPLES to hold real values
 double vImag[SAMPLES]; //create vector of size SAMPLES to hold imaginary values
- int vib_sensor = A0; 
+int vib_sensor = A0; 
 int vib_data = 0; 
 
 
