@@ -1,3 +1,4 @@
+
 close all
 clear a
 a = arduino('com3', 'uno');
@@ -125,6 +126,7 @@ figure();
 [f0,loc]=pitch(y,Fs);
 p1 = mean(f0);
 P = ['The pitch of this sample is ', num2str(p1),' Hz.'];
+P = ['The maximum pitch of this sample is ', num2str(p1),' Hz.'];
 disp(P)
 plot(loc,f0) 
 xlabel('Location')
@@ -153,7 +155,7 @@ else
     pause(0.5);
     end
 end
-%end
+end
 %%
 
 %%
