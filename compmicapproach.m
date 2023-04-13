@@ -1,4 +1,3 @@
-
 close all
 clear a
 a = arduino('com3', 'uno');
