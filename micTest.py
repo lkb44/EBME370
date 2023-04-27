@@ -1,38 +1,64 @@
+import os
+import time
 import array
-import audiobusio
 import math
 import board
-import time
+import busio
+import storage
+import digitalio
+import audiobusio
+import adafruit_sdcard
+import adafruit_datetime as dt
 
-# Set up the PDM microphone
+spi = busio.SPI(board.GP18, MOSI=board.GP19, MISO=board.GP16)
+cs = digitalio.DigitalInOut(board.GP17)
+
+sdcard = adafruit_sdcard.SDCard(spi, cs)
+
+vfs = storage.VfsFat(sdcard)
+storage.mount(vfs, "/sd")
+
+# Change directory to the SD card
+os.chdir("/sd")
+
+# Remove DC bias before computing RMS.
+def mean(values):
+    return sum(values) / len(values)
+
+
+def normalized_rms(values):
+    minbuf = int(mean(values))
+    samples_sum = sum(
+        float(sample - minbuf) * (sample - minbuf)
+        for sample in values
+    )
+
+    return math.sqrt(samples_sum / len(values))
+
+
+# Main program
 mic = audiobusio.PDMIn(board.GP20, board.GP21, sample_rate=16000, bit_depth=16)
-
 samples = array.array('H', [0] * 160)
-mic.record(samples, len(samples))
 
-# Define a function to calculate the decibel value
-def calculate_db(sample):
-    rms = math.sqrt(sum([(sample[i] - 32767) ** 2 for i in range(len(sample))]) / len(sample))
-    db = 20 * math.log10(rms / 32767)
-    return db
+# Open a file for writing
+with open("test.csv", "a") as f:
+    while True:
+        mic.record(samples, len(samples))
+        # Get the current date and time
+        now = dt.datetime.now()
 
-# Define a function to calculate the frequency value
-def calculate_freq(sample, sample_rate):
-    fft = audiobusio.FFT(sample)
-    spectrum = fft.as_magnitude_db()
-    peak = 0
-    peak_idx = 0
-    for i in range(len(spectrum) // 2):
-        if spectrum[i] > peak:
-            peak = spectrum[i]
-            peak_idx = i
-    freq = sample_rate * peak_idx / len(spectrum)
-    return freq
+        # Format the date and time as a string
+        timestamp = "{:02}:{:02}:{:02}".format(
+            now.hour, now.minute, now.second
+        )
+        print(timestamp)
+        magnitude = normalized_rms(samples)
+        print(magnitude)
+        os.chdir("/sd")
+        # Write some data to the file
+        f.write("Decibels: {:.2f}, ".format(magnitude))
+        f.write(", ".format(timestamp))
+        f.write("\n")
+        print(os.listdir())
+        time.sleep(1)
 
-# Continuously print the decibel and frequency values
-while True:
-    mic.record(samples, len(samples))
-    db = calculate_db(samples)
-    freq = calculate_freq(samples, mic.sample_rate)
-    print("Decibel value:", db, "Frequency value:", freq)
-    time.sleep(0.1)
